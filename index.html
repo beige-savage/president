@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>정치외교학과에서 대통령까지</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── 상단 헤더 ── */
+  #header {
+    background: #161b22;
+    border-bottom: 2px solid #30363d;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  #header .title { font-size: 14px; color: #8b949e; letter-spacing: 1px; }
+  #stage-badge {
+    background: #1f6feb;
+    color: #fff;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 4px 16px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+  }
+  #turn-info { font-size: 14px; color: #8b949e; }
+  #turn-info span { color: #f0c04c; font-weight: bold; font-size: 16px; }
+
+  /* ── 메인 ── */
+  #main { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── 좌측 능력치 패널 ── */
+  #stats-panel {
+    width: 200px;
+    background: #161b22;
+    border-right: 2px solid #30363d;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex-shrink: 0;
+  }
+  #stats-panel h3 {
+    font-size: 12px; color: #8b949e; letter-spacing: 2px;
+    text-transform: uppercase; border-bottom: 1px solid #30363d; padding-bottom: 8px;
+  }
+  .stat-item { display: flex; flex-direction: column; gap: 6px; }
+  .stat-label { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+  .stat-name { display: flex; align-items: center; gap: 6px; }
+  .stat-emoji { font-size: 15px; }
+  .stat-value { font-size: 13px; font-weight: bold; color: #f0c04c; min-width: 28px; text-align: right; }
+  .stat-bar-bg { background: #21262d; border-radius: 4px; height: 8px; overflow: hidden; }
+  .stat-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+  .bar-학식  { background: linear-gradient(90deg, #388bfd, #79c0ff); }
+  .bar-인맥  { background: linear-gradient(90deg, #a371f7, #d2a8ff); }
+  .bar-연설력 { background: linear-gradient(90deg, #3fb950, #7ee787); }
+  .bar-여론  { background: linear-gradient(90deg, #f78166, #ffa198); }
+  .bar-체력  { background: linear-gradient(90deg, #f0c04c, #ffd700); }
+
+  /* ── 중앙 게임 영역 ── */
+  #game-area {
+    flex: 1; display: flex; flex-direction: column;
+    padding: 28px 32px 24px; gap: 20px; overflow: hidden;
+  }
+
+  /* 상황 설명 */
+  #situation-box {
+    flex: 1; background: #161b22; border: 1px solid #30363d;
+    border-radius: 10px; padding: 24px 28px;
+    display: flex; flex-direction: column; gap: 14px; overflow-y: auto;
+  }
+  .event-tag { font-size: 11px; letter-spacing: 2px; color: #8b949e; text-transform: uppercase; }
+  #situation-text { font-size: 15px; line-height: 1.85; color: #c9d1d9; flex: 1; }
+
+  /* 결과 델타 표시 */
+  .result-block {
+    background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+    padding: 12px 16px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .result-title { font-size: 12px; color: #8b949e; letter-spacing: 1px; }
+  .delta-list { display: flex; gap: 10px; flex-wrap: wrap; }
+  .delta-pos { color: #3fb950; font-weight: bold; font-size: 13px; }
+  .delta-neg { color: #f78166; font-weight: bold; font-size: 13px; }
+  .forced-rest-msg {
+    color: #f0c04c; font-size: 13px; border-top: 1px solid #21262d;
+    padding-top: 8px; margin-top: 2px;
+  }
+
+  .hint { font-size: 12px; color: #484f58; border-top: 1px solid #21262d; padding-top: 12px; }
+
+  /* 단계별 배경 색조 */
+  body.stage-0 { background: #0d1117; }
+  body.stage-1 { background: #0d1a1a; }
+  body.stage-2 { background: #0d1520; }
+  body.stage-3 { background: #130d20; }
+  body.stage-4 { background: #1a0d1a; }
+  body.stage-5 { background: #1a0d0d; }
+  body.stage-6 { background: #1a1000; }
+
+  /* 진급 심사 모드 */
+  #choices.exam-mode .choice-btn:first-child { border-color: #3fb95044; }
+  #choices.exam-mode .choice-btn:first-child:hover { border-color: #3fb950; background: #0d2010; }
+  #choices.exam-mode .choice-btn:last-child { border-color: #f7816644; }
+  #choices.exam-mode .choice-btn:last-child:hover { border-color: #f78166; background: #201010; }
+  .exam-banner {
+    background: #1a2600; border: 1px solid #3fb95066;
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 12px; color: #3fb950; letter-spacing: 1px;
+  }
+  .promote-msg { color: #3fb950; font-weight: bold; font-size: 14px; }
+  .demote-msg  { color: #f78166; font-weight: bold; font-size: 13px; }
+
+  /* 이벤트 모드 */
+  #event-tag.is-event { color: #f0c04c; }
+  .event-banner {
+    background: #2d1f00; border: 1px solid #f0c04c44;
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 12px; color: #f0c04c; letter-spacing: 1px;
+  }
+  #choices.event-mode .choice-btn { border-color: #f0c04c44; }
+  #choices.event-mode .choice-btn:hover { border-color: #f0c04c; background: #2d1f00; }
+
+  /* 선택지 버튼 */
+  #choices { display: flex; gap: 12px; flex-shrink: 0; }
+  .choice-btn {
+    flex: 1; background: #161b22; border: 1px solid #30363d;
+    border-radius: 10px; padding: 16px 14px; color: #e6edf3;
+    font-family: inherit; font-size: 14px; line-height: 1.6;
+    cursor: pointer; text-align: left;
+    transition: border-color 0.2s, background 0.2s, transform 0.1s;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .choice-btn:hover { border-color: #1f6feb; background: #1c2432; transform: translateY(-2px); }
+  .choice-btn:active { transform: translateY(0); }
+  .choice-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .choice-num { font-size: 11px; color: #8b949e; letter-spacing: 1px; }
+  .choice-text { font-size: 14px; color: #c9d1d9; }
+  .choice-effect { font-size: 12px; color: #484f58; margin-top: auto; }
+
+  /* ── 하단 ── */
+  #footer {
+    background: #161b22; border-top: 1px solid #30363d;
+    padding: 8px 24px; font-size: 12px; color: #484f58;
+    display: flex; justify-content: space-between; flex-shrink: 0;
+  }
+
+  /* ── 엔딩 오버레이 ── */
+  #ending-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 999;
+    align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.88);
+  }
+  #ending-overlay.show { display: flex; }
+  #ending-box {
+    background: #161b22; border: 2px solid #30363d;
+    border-radius: 16px; padding: 40px 48px;
+    max-width: 520px; width: 90%; text-align: center;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  #ending-overlay.win  #ending-box { border-color: #f0c04c; }
+  #ending-overlay.lose #ending-box { border-color: #f78166; }
+  .ending-emoji { font-size: 56px; }
+  .ending-title { font-size: 22px; font-weight: bold; }
+  #ending-overlay.win  .ending-title { color: #f0c04c; }
+  #ending-overlay.lose .ending-title { color: #f78166; }
+  .ending-body { font-size: 14px; color: #c9d1d9; line-height: 1.9; }
+  .ending-stat-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 8px; margin: 4px 0;
+  }
+  .ending-stat-cell {
+    background: #0d1117; border-radius: 8px; padding: 8px 4px;
+    font-size: 12px; color: #8b949e; display: flex;
+    flex-direction: column; align-items: center; gap: 4px;
+  }
+  .ending-stat-cell strong { color: #f0c04c; font-size: 15px; }
+  .ending-best { font-size: 12px; color: #3fb950; }
+  #restart-btn {
+    background: #1f6feb; color: #fff; border: none;
+    border-radius: 8px; padding: 12px 32px; font-size: 15px;
+    font-family: inherit; cursor: pointer; font-weight: bold;
+    transition: background 0.2s;
+  }
+  #restart-btn:hover { background: #388bfd; }
+  #best-record { font-size: 12px; color: #8b949e; }
+  #best-record span { color: #3fb950; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<!-- 상단 헤더 -->
+<div id="header">
+  <div class="title">🏛️ 정치외교학과에서 대통령까지</div>
+  <div id="stage-badge">📚 학부생</div>
+  <div id="turn-info">턴 <span id="turn-num">1</span></div>
+</div>
+
+<!-- 메인 -->
+<div id="main">
+
+  <!-- 좌측 능력치 -->
+  <div id="stats-panel">
+    <h3>능력치</h3>
+    <div class="stat-item">
+      <div class="stat-label">
+        <div class="stat-name"><span class="stat-emoji">📖</span> 학식</div>
+        <div class="stat-value" id="val-학식">20</div>
+      </div>
+      <div class="stat-bar-bg"><div class="stat-bar-fill bar-학식" id="bar-학식" style="width:20%"></div></div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">
+        <div class="stat-name"><span class="stat-emoji">🤝</span> 인맥</div>
+        <div class="stat-value" id="val-인맥">20</div>
+      </div>
+      <div class="stat-bar-bg"><div class="stat-bar-fill bar-인맥" id="bar-인맥" style="width:20%"></div></div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">
+        <div class="stat-name"><span class="stat-emoji">🎤</span> 연설력</div>
+        <div class="stat-value" id="val-연설력">20</div>
+      </div>
+      <div class="stat-bar-bg"><div class="stat-bar-fill bar-연설력" id="bar-연설력" style="width:20%"></div></div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">
+        <div class="stat-name"><span class="stat-emoji">📣</span> 여론</div>
+        <div class="stat-value" id="val-여론">20</div>
+      </div>
+      <div class="stat-bar-bg"><div class="stat-bar-fill bar-여론" id="bar-여론" style="width:20%"></div></div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">
+        <div class="stat-name"><span class="stat-emoji">💪</span> 체력</div>
+        <div class="stat-value" id="val-체력">20</div>
+      </div>
+      <div class="stat-bar-bg"><div class="stat-bar-fill bar-체력" id="bar-체력" style="width:20%"></div></div>
+    </div>
+  </div>
+
+  <!-- 중앙 게임 영역 -->
+  <div id="game-area">
+    <div id="situation-box">
+      <div class="event-tag" id="event-tag">📅 1턴 — 입학</div>
+      <div id="situation-text"></div>
+      <div id="result-area"></div>
+      <div class="hint">💡 선택은 능력치에 영향을 줍니다.</div>
+    </div>
+    <div id="choices"></div>
+  </div>
+</div>
+
+<!-- 하단 -->
+<div id="footer">
+  <span>한빛대학교 정치외교학과</span>
+  <span id="best-record">🏆 최고기록: <span id="best-turn">-</span></span>
+  <span>⚠️ 모든 정당·인물은 가상입니다</span>
+</div>
+
+<!-- 엔딩 오버레이 -->
+<div id="ending-overlay">
+  <div id="ending-box">
+    <div class="ending-emoji" id="ending-emoji">🎉</div>
+    <div class="ending-title" id="ending-title"></div>
+    <div class="ending-body" id="ending-body"></div>
+    <div class="ending-stat-grid" id="ending-stats"></div>
+    <div class="ending-best" id="ending-best-msg"></div>
+    <button id="restart-btn" onclick="restartGame()">🔄 다시 시작</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// 진급 단계 정의
+// minTurn: 해당 턴 이상이어야 심사 가능
+// statSum: 5개 능력치 합산 기준
+// threshold: 무작위 보정(0~20) 포함 합산이 이 값 이상이면 성공
+// ═══════════════════════════════════════
+const STAGES = [
+  { name: '학부생',      minTurn:  5, statSum: 130, threshold: 140 }, // → 외교관 후보자
+  { name: '외교관 후보자', minTurn: 10, statSum: 180, threshold: 195 }, // → 보좌관
+  { name: '보좌관',      minTurn: 15, statSum: 230, threshold: 250 }, // → 국회의원
+  { name: '국회의원',    minTurn: 20, statSum: 285, threshold: 305 }, // → 당대표
+  { name: '당대표',      minTurn: 25, statSum: 340, threshold: 360 }, // → 대선 후보
+  { name: '대선 후보',   minTurn: 30, statSum: 390, threshold: 408 }, // → 대통령
+  { name: '대통령',      minTurn: 99, statSum: 999, threshold: 999 }, // 최종 도달
+];
+
+// ═══════════════════════════════════════
+// 이벤트 데이터 (stage별, 나중에 단계 추가 가능)
+// ═══════════════════════════════════════
+// effect 형식: { stat: '능력치명', delta: 숫자 }  — delta 음수면 감소
+const EVENTS = [
+  {
+    stage: '학부생',
+    text: '⚗️ 교수님이 연구실 인턴을 제안했다. 바쁘지만 귀한 기회다.',
+    choices: [
+      { label: '수락한다 — 연구실에 합류한다',   effects: [{ stat: '학식', delta: 12 }, { stat: '체력', delta: -8 }] },
+      { label: '정중히 거절한다',                effects: [{ stat: '체력', delta: 5 }] },
+    ],
+  },
+  {
+    stage: '학부생',
+    text: '🌍 모의 UN 대회 참가 공고가 떴다. 대표단을 꾸려야 한다.',
+    choices: [
+      { label: '직접 팀장으로 나선다',            effects: [{ stat: '연설력', delta: 10 }, { stat: '인맥', delta: 6 }] },
+      { label: '옵저버로 조용히 참관한다',         effects: [{ stat: '학식', delta: 6 }] },
+    ],
+  },
+  {
+    stage: '학부생',
+    text: '📰 학보사가 쓴 기사가 논란이다. 내 발언이 오해를 샀다.',
+    choices: [
+      { label: '해명문을 직접 써서 배포한다',      effects: [{ stat: '여론', delta: 8 }, { stat: '연설력', delta: 4 }] },
+      { label: '침묵으로 넘긴다',                  effects: [{ stat: '여론', delta: -10 }] },
+    ],
+  },
+  {
+    stage: '학부생',
+    text: '🗳️ 학생회장 선거에 지인이 출마했다. 선거 운동을 도와달라고 한다.',
+    choices: [
+      { label: '적극적으로 돕는다',               effects: [{ stat: '인맥', delta: 10 }, { stat: '체력', delta: -6 }] },
+      { label: '응원만 하고 거리를 둔다',           effects: [{ stat: '인맥', delta: 3 }] },
+    ],
+  },
+  {
+    stage: '학부생',
+    text: '💼 선배가 정치 관련 NGO 인턴 자리를 소개해 줬다.',
+    choices: [
+      { label: '지원한다',                        effects: [{ stat: '여론', delta: 9 }, { stat: '인맥', delta: 5 }, { stat: '체력', delta: -7 }] },
+      { label: '학업에 집중하기로 한다',            effects: [{ stat: '학식', delta: 7 }] },
+    ],
+  },
+  {
+    stage: '학부생',
+    text: '🏆 전국 대학생 웅변 대회 참가 신청 기간이 시작됐다.',
+    choices: [
+      { label: '밤새 준비해 출전한다',              effects: [{ stat: '연설력', delta: 12 }, { stat: '체력', delta: -10 }] },
+      { label: '이번엔 관람만 한다',               effects: [{ stat: '학식', delta: 4 }, { stat: '체력', delta: 3 }] },
+    ],
+  },
+  // ── 외교관 후보자 ──
+  {
+    stage: '외교관 후보자',
+    text: '📋 외무 역량 필기시험 날짜가 공고됐다. 범위가 방대하다.',
+    choices: [
+      { label: '2주간 집중 벼락치기한다',           effects: [{ stat: '학식', delta: 12 }, { stat: '체력', delta: -9 }] },
+      { label: '평소 실력으로 임한다',              effects: [{ stat: '학식', delta: 5 }, { stat: '체력', delta: -2 }] },
+    ],
+  },
+  {
+    stage: '외교관 후보자',
+    text: '🌐 국제 협상 시뮬레이션 훈련에서 반대측 대표를 맡았다. 예상치 못한 역할이다.',
+    choices: [
+      { label: '끝까지 논리를 밀어붙인다',           effects: [{ stat: '연설력', delta: 11 }, { stat: '인맥', delta: -4 }] },
+      { label: '유연하게 타협안을 제시한다',          effects: [{ stat: '인맥', delta: 9 }, { stat: '여론', delta: 5 }] },
+    ],
+  },
+  {
+    stage: '외교관 후보자',
+    text: '✈️ 해외 연수 프로그램 지원자를 모집한다. 경쟁률이 높다.',
+    choices: [
+      { label: '지원서를 밤새 다듬어 제출한다',       effects: [{ stat: '학식', delta: 8 }, { stat: '인맥', delta: 7 }, { stat: '체력', delta: -8 }] },
+      { label: '이번엔 포기하고 국내 준비에 집중한다', effects: [{ stat: '학식', delta: 6 }, { stat: '체력', delta: 4 }] },
+    ],
+  },
+  {
+    stage: '외교관 후보자',
+    text: '🤝 선배 외교관이 멘토링을 제안했다. 바쁜 사람이라 시간 맞추기가 쉽지 않다.',
+    choices: [
+      { label: '일정을 조정해 꼭 만난다',            effects: [{ stat: '인맥', delta: 12 }, { stat: '체력', delta: -5 }] },
+      { label: '이메일로 조언만 구한다',              effects: [{ stat: '학식', delta: 5 }] },
+    ],
+  },
+
+  // ── 보좌관 ──
+  {
+    stage: '보좌관',
+    text: '📝 국정감사 전날, 의원실에 자료 준비를 맡겼지만 오류가 발견됐다.',
+    choices: [
+      { label: '밤샘 작업으로 직접 수정한다',         effects: [{ stat: '학식', delta: 10 }, { stat: '여론', delta: 6 }, { stat: '체력', delta: -10 }] },
+      { label: '팀원에게 분담해 수정을 맡긴다',        effects: [{ stat: '인맥', delta: 7 }, { stat: '체력', delta: -4 }] },
+    ],
+  },
+  {
+    stage: '보좌관',
+    text: '🎙️ 의원 대신 지역 라디오에 출연해 정책을 설명해야 한다.',
+    choices: [
+      { label: '핵심만 짧고 명확하게 전달한다',        effects: [{ stat: '연설력', delta: 11 }, { stat: '여론', delta: 8 }] },
+      { label: '자료를 보며 꼼꼼히 설명한다',          effects: [{ stat: '학식', delta: 7 }, { stat: '여론', delta: 3 }] },
+    ],
+  },
+  {
+    stage: '보좌관',
+    text: '⚖️ 의원실 내 예산 배분을 두고 동료 보좌관과 의견이 충돌했다.',
+    choices: [
+      { label: '데이터로 내 안을 관철시킨다',          effects: [{ stat: '학식', delta: 8 }, { stat: '인맥', delta: -5 }] },
+      { label: '중재안을 만들어 합의를 끌어낸다',       effects: [{ stat: '인맥', delta: 10 }, { stat: '연설력', delta: 5 }] },
+    ],
+  },
+  {
+    stage: '보좌관',
+    text: '📰 언론이 의원 발언을 오보했다. 해명 보도자료를 빠르게 써야 한다.',
+    choices: [
+      { label: '즉시 강경한 입장문을 배포한다',        effects: [{ stat: '여론', delta: 9 }, { stat: '연설력', delta: 6 }, { stat: '체력', delta: -6 }] },
+      { label: '사실 확인 후 조용히 수정 요청한다',     effects: [{ stat: '학식', delta: 6 }, { stat: '여론', delta: 4 }] },
+    ],
+  },
+
+  // ── 국회의원 ──
+  {
+    stage: '국회의원',
+    text: '🏛️ 상임위 국정감사에서 장관에게 핵심 질의를 할 기회가 생겼다.',
+    choices: [
+      { label: '날카로운 쟁점 질문으로 압박한다',      effects: [{ stat: '연설력', delta: 12 }, { stat: '여론', delta: 9 }] },
+      { label: '정책 대안을 함께 제시하며 협력을 구한다', effects: [{ stat: '학식', delta: 8 }, { stat: '인맥', delta: 7 }] },
+    ],
+  },
+  {
+    stage: '국회의원',
+    text: '🗳️ 지역구에서 예산 확보 민원이 폭주하고 있다. 처리 순서를 정해야 한다.',
+    choices: [
+      { label: '여론이 가장 큰 사안부터 처리한다',      effects: [{ stat: '여론', delta: 12 }, { stat: '체력', delta: -7 }] },
+      { label: '실제 필요가 큰 사안부터 처리한다',      effects: [{ stat: '학식', delta: 7 }, { stat: '인맥', delta: 6 }] },
+    ],
+  },
+  {
+    stage: '국회의원',
+    text: '📡 해외 의원 교류단 방문을 맞아 환영사를 준비해야 한다.',
+    choices: [
+      { label: '직접 외국어로 연설에 도전한다',         effects: [{ stat: '연설력', delta: 10 }, { stat: '인맥', delta: 9 }, { stat: '체력', delta: -5 }] },
+      { label: '통역관에게 맡기고 내용에 집중한다',      effects: [{ stat: '학식', delta: 7 }, { stat: '인맥', delta: 5 }] },
+    ],
+  },
+  {
+    stage: '국회의원',
+    text: '🤝 연립 교섭 과정에서 협력 의원과 의견이 갈렸다.',
+    choices: [
+      { label: '원칙을 지키며 설득을 계속한다',         effects: [{ stat: '연설력', delta: 8 }, { stat: '여론', delta: 7 }, { stat: '인맥', delta: -4 }] },
+      { label: '일부 양보하고 연대를 유지한다',          effects: [{ stat: '인맥', delta: 11 }, { stat: '여론', delta: 4 }] },
+    ],
+  },
+
+  // ── 당대표 ──
+  {
+    stage: '당대표',
+    text: '🎖️ 전당대회를 앞두고 당내 경선 일정이 발표됐다. 조직력이 관건이다.',
+    choices: [
+      { label: '전국 순회 유세로 지지를 결집한다',      effects: [{ stat: '여론', delta: 11 }, { stat: '인맥', delta: 8 }, { stat: '체력', delta: -10 }] },
+      { label: '핵심 당원들과 소규모 간담회를 연다',     effects: [{ stat: '인맥', delta: 12 }, { stat: '연설력', delta: 5 }] },
+    ],
+  },
+  {
+    stage: '당대표',
+    text: '📺 여야 당대표 토론이 생중계됐다. 상대방이 예상 밖 공세를 펼쳤다.',
+    choices: [
+      { label: '즉석에서 반박 논리를 구사한다',         effects: [{ stat: '연설력', delta: 13 }, { stat: '여론', delta: 8 }] },
+      { label: '침착하게 기존 입장을 반복한다',          effects: [{ stat: '여론', delta: 5 }, { stat: '체력', delta: 3 }] },
+    ],
+  },
+  {
+    stage: '당대표',
+    text: '⚡ 당 소속 의원이 돌발 발언으로 구설에 올랐다. 수습이 필요하다.',
+    choices: [
+      { label: '공개 사과를 요구하고 징계를 추진한다',   effects: [{ stat: '여론', delta: 10 }, { stat: '인맥', delta: -6 }] },
+      { label: '내부 설득으로 자진 해명을 유도한다',     effects: [{ stat: '인맥', delta: 9 }, { stat: '여론', delta: 4 }] },
+    ],
+  },
+  {
+    stage: '당대표',
+    text: '📊 당 정책연구소가 발표한 보고서가 논란이 됐다. 내용이 현실과 괴리됐다는 비판이다.',
+    choices: [
+      { label: '보고서를 전면 재검토하고 수정 발표한다', effects: [{ stat: '학식', delta: 9 }, { stat: '여론', delta: 8 }, { stat: '체력', delta: -7 }] },
+      { label: '내용을 재해석해 언론에 직접 설명한다',   effects: [{ stat: '연설력', delta: 10 }, { stat: '여론', delta: 5 }] },
+    ],
+  },
+
+  // ── 대선 후보 ──
+  {
+    stage: '대선 후보',
+    text: '📢 1차 TV 대선 토론이 열렸다. 전국 시청자가 지켜보고 있다.',
+    choices: [
+      { label: '구체적 공약 수치로 상대를 압도한다',     effects: [{ stat: '연설력', delta: 13 }, { stat: '여론', delta: 10 }] },
+      { label: '서민 공감 스토리로 감성에 호소한다',     effects: [{ stat: '여론', delta: 13 }, { stat: '인맥', delta: 6 }] },
+    ],
+  },
+  {
+    stage: '대선 후보',
+    text: '🌏 외교안보 공약을 발표했다. 국제 언론도 주목하고 있다.',
+    choices: [
+      { label: '다자 협력 중심의 적극적 외교를 천명한다', effects: [{ stat: '학식', delta: 10 }, { stat: '여론', delta: 9 }] },
+      { label: '국익 우선 실용 외교를 강조한다',          effects: [{ stat: '연설력', delta: 8 }, { stat: '여론', delta: 8 }] },
+    ],
+  },
+  {
+    stage: '대선 후보',
+    text: '🗞️ 상대 캠프가 허위 사실을 유포하며 흑색선전을 시작했다.',
+    choices: [
+      { label: '즉각 반박 성명을 내고 법적 조치를 예고한다', effects: [{ stat: '여론', delta: 11 }, { stat: '체력', delta: -8 }] },
+      { label: '무시하고 정책 행보에 집중한다',            effects: [{ stat: '여론', delta: 5 }, { stat: '체력', delta: 4 }] },
+    ],
+  },
+  {
+    stage: '대선 후보',
+    text: '🤝 군소 후보와의 단일화 제안이 들어왔다. 여론 판세가 엇갈린다.',
+    choices: [
+      { label: '단일화를 수용하고 지지층을 합친다',       effects: [{ stat: '인맥', delta: 12 }, { stat: '여론', delta: 10 }, { stat: '연설력', delta: -3 }] },
+      { label: '독자 노선을 고집하고 정면 돌파한다',       effects: [{ stat: '연설력', delta: 10 }, { stat: '여론', delta: 6 }] },
+    ],
+  },
+];
+
+// ═══════════════════════════════════════
+// 행동 데이터 (나중에 항목 추가 가능)
+// ═══════════════════════════════════════
+const ACTIONS = [
+  {
+    id: 'study',
+    label: '📖 스터디 참여',
+    desc: '학술 소모임에서 함께 공부한다. 논문을 읽고 토론하며 시간을 보냈다.',
+    gainStat: '학식',
+    staminaType: 'cost',   // 체력 -5
+    effectText: '학식 ↑ · 체력 ↓',
+  },
+  {
+    id: 'council',
+    label: '🙋 학생회 활동',
+    desc: '학생회 회의에 참석해 교내 현안을 함께 논의했다. 다양한 사람을 만났다.',
+    gainStat: '인맥',
+    staminaType: 'cost',
+    effectText: '인맥 ↑ · 체력 ↓',
+  },
+  {
+    id: 'debate',
+    label: '🎤 토론 대회',
+    desc: '교내 토론 대회에 출전해 상대방을 논리로 압도했다. 관중의 시선이 집중됐다.',
+    gainStat: '연설력',
+    staminaType: 'cost',
+    effectText: '연설력 ↑ · 체력 ↓',
+  },
+  {
+    id: 'volunteer',
+    label: '❤️ 봉사활동',
+    desc: '지역 주민들과 함께 봉사 활동을 했다. 작은 도움이 큰 감사로 돌아왔다.',
+    gainStat: '여론',
+    staminaType: 'cost',
+    effectText: '여론 ↑ · 체력 ↓',
+  },
+  {
+    id: 'exercise',
+    label: '💪 운동',
+    desc: '헬스장에서 땀을 흘리며 체력을 단련했다. 몸이 가벼워진 기분이다.',
+    gainStat: '체력',
+    staminaType: 'gain',   // 체력 ↑
+    effectText: '체력 ↑↑',
+  },
+  {
+    id: 'rest',
+    label: '😴 휴식',
+    desc: '방에서 푹 쉬며 재충전했다. 아무것도 하지 않는 것도 때론 필요하다.',
+    gainStat: null,        // 체력만 오름, 다른 능력치 변화 없음
+    staminaType: 'gain',
+    effectText: '체력 ↑↑',
+  },
+];
+
+// 첫 턴 상황 텍스트
+const INTRO_TEXT =
+  '드디어 <strong>한빛대학교 정치외교학과</strong>에 입학했다.<br>' +
+  '오늘은 첫 강의 날. 강의실에 들어서자 이미 여러 학생들이 자리를 잡고 있다.<br>' +
+  '교수님이 칠판에 크게 쓴다 — <strong>"정치란 무엇인가?"</strong><br><br>' +
+  '어디서부터 시작해야 할까. 첫 행동을 골라보자.';
+
+// ═══════════════════════════════════════
+// 전역 상태 객체
+// ═══════════════════════════════════════
+const state = {
+  turn: 1,
+  stageIndex: 0,
+  stages: ['학부생', '외교관 후보자', '보좌관', '국회의원', '당대표', '대선 후보', '대통령'],
+  stats: { 학식: 20, 인맥: 20, 연설력: 20, 여론: 20, 체력: 20 },
+  currentChoices: [],  // ACTIONS 중 현재 턴에 표시할 3개
+  lastResult: null,    // { action, deltas, forcedRest }
+  currentEvent: null,  // 현재 발생한 이벤트 객체 (null이면 일반 턴)
+  examPending: false,  // 진급 심사 대기 중 여부
+  ended: false,        // 게임 종료 여부
+};
+
+// ═══════════════════════════════════════
+// localStorage 저장 / 불러오기
+// ═══════════════════════════════════════
+const SAVE_KEY = 'politicsGame_save';
+const BEST_KEY = 'politicsGame_best';
+
+function saveGame() {
+  if (state.ended) return;
+  const snapshot = {
+    turn: state.turn,
+    stageIndex: state.stageIndex,
+    stats: { ...state.stats },
+    examPending: state.examPending,
+    // currentEvent, currentChoices는 턴 시작 시 재생성
+  };
+  localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot));
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const snap = JSON.parse(raw);
+    state.turn        = snap.turn;
+    state.stageIndex  = snap.stageIndex;
+    state.stats       = snap.stats;
+    state.examPending = snap.examPending || false;
+    state.lastResult  = null;
+    return true;
+  } catch (e) { return false; }
+}
+
+function clearSave() { localStorage.removeItem(SAVE_KEY); }
+
+function getBestTurn() {
+  const v = parseInt(localStorage.getItem(BEST_KEY), 10);
+  return isNaN(v) ? null : v;
+}
+
+function updateBest(turn) {
+  const prev = getBestTurn();
+  if (prev === null || turn < prev) {
+    localStorage.setItem(BEST_KEY, String(turn));
+    return true; // 신기록
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════
+// 엔딩 표시
+// ═══════════════════════════════════════
+function showEnding(type) {
+  state.ended = true;
+  clearSave();
+
+  const overlay = document.getElementById('ending-overlay');
+  const statNames = [
+    ['📖', '학식'], ['🤝', '인맥'], ['🎤', '연설력'], ['📣', '여론'], ['💪', '체력'],
+  ];
+
+  // 능력치 그리드
+  document.getElementById('ending-stats').innerHTML = statNames.map(([em, name]) =>
+    `<div class="ending-stat-cell">${em}<strong>${state.stats[name]}</strong>${name}</div>`
+  ).join('');
+
+  let bestMsg = '';
+  if (type === 'win') {
+    const isNew = updateBest(state.turn);
+    const best  = getBestTurn();
+    bestMsg = isNew
+      ? `🏆 신기록! 최고 기록 갱신: ${best}턴`
+      : `🏆 현재 최고 기록: ${best}턴`;
+
+    overlay.className = 'show win';
+    document.getElementById('ending-emoji').textContent  = '🎉';
+    document.getElementById('ending-title').textContent  = '대통령에 당선되었습니다!';
+    document.getElementById('ending-body').innerHTML     =
+      `<strong>${state.turn}턴</strong> 만에 정치외교학과 신입생에서 대통령이 됐다.<br>대한민국(가상)의 새 역사가 시작된다.`;
+  } else {
+    overlay.className = 'show lose';
+    document.getElementById('ending-emoji').textContent  = '💔';
+    document.getElementById('ending-title').textContent  = '정치 생명이 끝났습니다';
+    document.getElementById('ending-body').innerHTML     =
+      `여론이 완전히 등을 돌렸다.<br><strong>${state.turn}턴</strong> 동안의 여정이 여기서 마무리된다.`;
+    bestMsg = getBestTurn() ? `🏆 최고 기록: ${getBestTurn()}턴` : '';
+  }
+
+  document.getElementById('ending-best-msg').textContent = bestMsg;
+  renderBestRecord();
+}
+
+// ═══════════════════════════════════════
+// 다시 시작
+// ═══════════════════════════════════════
+function restartGame() {
+  clearSave();
+  state.turn         = 1;
+  state.stageIndex   = 0;
+  state.stats        = { 학식: 20, 인맥: 20, 연설력: 20, 여론: 20, 체력: 20 };
+  state.currentChoices = [];
+  state.lastResult   = null;
+  state.currentEvent = null;
+  state.examPending  = false;
+  state.ended        = false;
+  document.getElementById('ending-overlay').className = '';
+  state.currentEvent = rollEvent();
+  if (!state.currentEvent) generateChoices();
+  render();
+}
+
+// 하단 최고기록 표시
+function renderBestRecord() {
+  const best = getBestTurn();
+  document.getElementById('best-turn').textContent = best ? best + '턴' : '-';
+}
+
+// ═══════════════════════════════════════
+// 유틸
+// ═══════════════════════════════════════
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function clamp(v) { return Math.max(0, Math.min(100, v)); }
+
+function stageEmoji(stage) {
+  const map = {
+    '학부생':      '📚', '외교관 후보자': '🌐', '보좌관':   '🗂️',
+    '국회의원':    '🏛️', '당대표':       '🎖️', '대선 후보': '📢', '대통령': '🇰🇷',
+  };
+  return map[stage] || '⭐';
+}
+
+// ═══════════════════════════════════════
+// 진급 조건 체크
+// ═══════════════════════════════════════
+function checkPromotion() {
+  if (state.stageIndex >= STAGES.length - 1) return false; // 이미 대통령
+  const cond = STAGES[state.stageIndex];
+  const sum  = Object.values(state.stats).reduce((a, b) => a + b, 0);
+  return state.turn >= cond.minTurn && sum >= cond.statSum;
+}
+
+// ═══════════════════════════════════════
+// 진급 심사 실행
+// ═══════════════════════════════════════
+function runExam() {
+  const cond  = STAGES[state.stageIndex];
+  const sum   = Object.values(state.stats).reduce((a, b) => a + b, 0);
+  const bonus = randInt(0, 20);
+  const score = sum + bonus;
+  const pass  = score >= cond.threshold;
+
+  if (pass) {
+    state.stageIndex++;
+    state.examPending = false;
+    state.lastResult = { isExam: true, pass: true, score, threshold: cond.threshold, bonus, newStage: state.stages[state.stageIndex] };
+    state.turn++;
+    saveGame();
+    // 대통령 달성 → 승리 엔딩
+    if (state.stageIndex === state.stages.length - 1) {
+      render();
+      showEnding('win');
+      return;
+    }
+  } else {
+    state.stats['여론'] = clamp(state.stats['여론'] - 10);
+    state.examPending = false;
+    state.lastResult = { isExam: true, pass: false, score, threshold: cond.threshold, bonus };
+    state.turn++;
+    saveGame();
+  }
+  state.currentEvent = rollEvent();
+  if (!state.currentEvent) generateChoices();
+  render();
+}
+
+// ═══════════════════════════════════════
+// 이벤트 추첨 (30% 확률, 현재 stage 필터)
+// ═══════════════════════════════════════
+function rollEvent() {
+  if (Math.random() > 0.3) return null;
+  const stage = state.stages[state.stageIndex];
+  const pool = EVENTS.filter(e => e.stage === stage);
+  if (!pool.length) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// ═══════════════════════════════════════
+// 이벤트 선택 처리
+// ═══════════════════════════════════════
+function chooseEvent(idx) {
+  const ev = state.currentEvent;
+  const chosen = ev.choices[idx];
+  const deltas = {};
+
+  for (const eff of chosen.effects) {
+    deltas[eff.stat] = (deltas[eff.stat] || 0) + eff.delta;
+  }
+  for (const [stat, delta] of Object.entries(deltas)) {
+    state.stats[stat] = clamp(state.stats[stat] + delta);
+  }
+
+  let forcedRest = false;
+  if (state.stats['체력'] <= 0) {
+    state.stats['체력'] = 30;
+    forcedRest = true;
+  }
+
+  state.lastResult = { isEvent: true, eventText: ev.text, choiceLabel: chosen.label, deltas, forcedRest };
+  state.currentEvent = null;
+  state.turn++;
+
+  if (checkPromotion()) { state.examPending = true; render(); return; }
+  state.currentEvent = rollEvent();
+  if (!state.currentEvent) generateChoices();
+  render();
+}
+
+// ═══════════════════════════════════════
+// 행동 선택지 3개 무작위 생성
+// ═══════════════════════════════════════
+function generateChoices() {
+  const shuffled = [...ACTIONS].sort(() => Math.random() - 0.5);
+  state.currentChoices = shuffled.slice(0, 3);
+}
+
+// ═══════════════════════════════════════
+// 선택 처리
+// ═══════════════════════════════════════
+function choose(idx) {
+  const action = state.currentChoices[idx];
+  const deltas = {};
+
+  if (action.staminaType === 'gain') {
+    // 운동 / 휴식: 체력 상승
+    const gain = randInt(5, 10);
+    deltas['체력'] = gain;
+    // gainStat이 '체력'이면 이미 위에서 처리됨, null이면(휴식) 체력만
+  } else {
+    // 일반 행동: 해당 능력치 상승, 체력 -5
+    const gain = randInt(5, 10);
+    deltas[action.gainStat] = gain;
+    deltas['체력'] = -5;
+  }
+
+  // 능력치 적용
+  for (const [stat, delta] of Object.entries(deltas)) {
+    state.stats[stat] = clamp(state.stats[stat] + delta);
+  }
+
+  // 체력 0 → 강제 휴식
+  let forcedRest = false;
+  if (state.stats['체력'] <= 0) {
+    state.stats['체력'] = 30;
+    forcedRest = true;
+  }
+
+  state.lastResult = { action, deltas, forcedRest };
+  state.turn++;
+
+  // 진급 조건 충족 시 심사 대기, 아니면 일반 다음 턴
+  if (checkPromotion()) { state.examPending = true; render(); return; }
+  state.currentEvent = rollEvent();
+  if (!state.currentEvent) generateChoices();
+  render();
+}
+
+// ═══════════════════════════════════════
+// 렌더
+// ═══════════════════════════════════════
+function render() {
+  const stage = state.stages[state.stageIndex];
+
+  // 배경 단계 색조
+  document.body.className = 'stage-' + state.stageIndex;
+
+  // 헤더
+  document.getElementById('turn-num').textContent = state.turn;
+  document.getElementById('stage-badge').textContent = stageEmoji(stage) + ' ' + stage;
+  document.getElementById('event-tag').textContent = '📅 ' + state.turn + '턴 — ' + stage;
+  document.getElementById('event-tag').className =
+    'event-tag' + (state.examPending ? ' is-event' : state.currentEvent ? ' is-event' : '');
+
+  // 상황 텍스트
+  const sitEl = document.getElementById('situation-text');
+  if (!state.lastResult) {
+    sitEl.innerHTML = INTRO_TEXT;
+  } else if (state.lastResult.isExam) {
+    const r = state.lastResult;
+    if (r.pass) {
+      sitEl.innerHTML =
+        `<span class="promote-msg">🎉 진급 심사 통과!</span><br>` +
+        `점수 <strong>${r.score}</strong> (기준 ${r.threshold}, 보정 +${r.bonus})<br><br>` +
+        `<strong>${r.newStage}</strong>(으)로 진급했다! 새로운 무대가 펼쳐진다.`;
+    } else {
+      sitEl.innerHTML =
+        `<span class="demote-msg">❌ 진급 심사 실패</span><br>` +
+        `점수 <strong>${r.score}</strong> (기준 ${r.threshold}, 보정 +${r.bonus})<br><br>` +
+        `아직 부족하다. 여론이 흔들렸다. <strong>여론 -10</strong>`;
+    }
+  } else if (state.examPending) {
+    const cond = STAGES[state.stageIndex];
+    const sum  = Object.values(state.stats).reduce((a, b) => a + b, 0);
+    sitEl.innerHTML =
+      `🔔 <strong>진급 심사 조건을 충족했습니다!</strong><br><br>` +
+      `현재 능력치 합산: <strong>${sum}</strong> (기준 ${cond.statSum})<br>` +
+      `심사에 도전하겠습니까? 운이 따라야 합니다.`;
+  } else if (state.lastResult.isEvent) {
+    sitEl.innerHTML = '📌 <em>' + state.lastResult.eventText + '</em><br><strong>→ ' + state.lastResult.choiceLabel + '</strong><br><br>이제 다음 행동을 선택하세요.';
+  } else {
+    sitEl.innerHTML = state.lastResult.action.desc + '<br><br>이제 다음 행동을 선택하세요.';
+  }
+
+  // 결과 델타 블록
+  const resultArea = document.getElementById('result-area');
+  if (state.lastResult && !state.lastResult.isExam && !state.examPending) {
+    const { deltas, forcedRest } = state.lastResult;
+    const deltaItems = Object.entries(deltas).map(([stat, d]) => {
+      const sign = d >= 0 ? '+' : '';
+      const cls  = d >= 0 ? 'delta-pos' : 'delta-neg';
+      return `<span class="${cls}">${stat} ${sign}${d}</span>`;
+    }).join('');
+
+    let html = `
+      <div class="result-block">
+        <div class="result-title">📊 지난 행동 결과</div>
+        <div class="delta-list">${deltaItems}</div>`;
+
+    if (forcedRest) {
+      html += `<div class="forced-rest-msg">😵 무리한 탓에 쓰러지고 말았다. 강제로 하루를 쉬었다. <strong>체력 +30</strong></div>`;
+    }
+    html += `</div>`;
+    resultArea.innerHTML = html;
+  } else {
+    resultArea.innerHTML = '';
+  }
+
+  // 능력치 바
+  for (const [key, val] of Object.entries(state.stats)) {
+    const clamped = clamp(val);
+    document.getElementById('val-' + key).textContent = clamped;
+    document.getElementById('bar-' + key).style.width = clamped + '%';
+  }
+
+  // 선택 버튼
+  const choicesEl = document.getElementById('choices');
+  choicesEl.innerHTML = '';
+
+  // 배너 정리 헬퍼
+  function removeBanner(id) { const b = document.getElementById(id); if (b) b.remove(); }
+  function addBanner(id, cls, text) {
+    if (!document.getElementById(id)) {
+      const b = document.createElement('div');
+      b.id = id; b.className = cls; b.textContent = text;
+      document.getElementById('situation-box').insertBefore(b, sitEl);
+    }
+  }
+
+  if (state.examPending) {
+    // ── 진급 심사 모드 ──
+    choicesEl.className = 'exam-mode';
+    removeBanner('event-banner');
+    addBanner('exam-banner', 'exam-banner', '🏅 진급 심사');
+
+    const makeExamBtn = (label, effect, onclick) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.innerHTML = `<div class="choice-num">선택</div><div class="choice-text">${label}</div><div class="choice-effect">${effect}</div>`;
+      btn.onclick = () => { document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true); onclick(); };
+      choicesEl.appendChild(btn);
+    };
+    makeExamBtn('🎯 지금 진급 심사에 도전한다', '능력치 합산 + 무작위 보정으로 판정', () => runExam());
+    makeExamBtn('📚 더 준비하고 다음 기회에 도전한다', '심사 건너뜀 · 다음 턴 진행', () => {
+      state.examPending = false;
+      state.currentEvent = rollEvent();
+      if (!state.currentEvent) generateChoices();
+      render();
+    });
+
+  } else if (state.currentEvent) {
+    // ── 이벤트 모드: 선택지 2개 ──
+    choicesEl.className = 'event-mode';
+    removeBanner('exam-banner');
+    addBanner('event-banner', 'event-banner', '⚡ 이벤트 발생!');
+    const ev = state.currentEvent;
+    sitEl.innerHTML = '<strong>' + ev.text + '</strong><br><br>어떻게 할까?';
+
+    const evNums = ['①', '②'];
+    ev.choices.forEach((ch, i) => {
+      const effectSummary = ch.effects.map(e => {
+        const sign = e.delta >= 0 ? '+' : '';
+        return e.stat + ' ' + sign + e.delta;
+      }).join(' · ');
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.innerHTML = `
+        <div class="choice-num">선택 ${evNums[i]}</div>
+        <div class="choice-text">${ch.label}</div>
+        <div class="choice-effect">${effectSummary}</div>`;
+      btn.onclick = () => {
+        document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+        chooseEvent(i);
+      };
+      choicesEl.appendChild(btn);
+    });
+
+  } else {
+    // ── 일반 모드: 선택지 3개 ──
+    choicesEl.className = '';
+    removeBanner('event-banner');
+    removeBanner('exam-banner');
+
+    const nums = ['①', '②', '③'];
+    state.currentChoices.forEach((action, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.innerHTML = `
+        <div class="choice-num">선택 ${nums[i]}</div>
+        <div class="choice-text">${action.label}</div>
+        <div class="choice-effect">${action.effectText}</div>`;
+      btn.onclick = () => {
+        document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+        choose(i);
+      };
+      choicesEl.appendChild(btn);
+    });
+  }
+}
+
+// ═══════════════════════════════════════
+// 초기화
+// ═══════════════════════════════════════
+state.currentEvent = rollEvent();
+if (!state.currentEvent) generateChoices();
+render();
+</script>
+</body>
+</html>
